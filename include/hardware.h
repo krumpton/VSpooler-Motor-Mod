@@ -38,5 +38,5 @@ extern QueueHandle_t input_event_queue;
 
 // functions
 void hardware_init();
-int read_inputs();
+uint8_t read_inputs();
 void motor_step();
