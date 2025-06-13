@@ -12,6 +12,11 @@ typedef enum {
     EVENT_SWITCH_TOGGLE,
 } input_event_t;
 
+typedef enum {
+    CLOCKWISE = 0,
+    ANTICLOCKWISE = 1,
+} motor_dir_t;
+
 // LED pin
 #define LED_PIN GPIO_NUM_2
 
@@ -19,14 +24,14 @@ typedef enum {
 #define STEP_DELAY_US 100
 #define STEP_PULSE_WIDTH_US 20
 
-#define STEP_PIN GPIO_NUM_8
-#define DIR_PIN GPIO_NUM_9
+#define DIR_PIN GPIO_NUM_8
+#define STEP_PIN GPIO_NUM_9
 #define EN_PIN GPIO_NUM_10
 
 // input pins
 #define BTN_PIN GPIO_NUM_3
 #define SWITCH_PIN GPIO_NUM_4
-#define RUNOUT_PIN GPIO_NUM_20
+#define RUNOUT_PIN GPIO_NUM_1
 
 // input bit positions
 #define BTN_BIT 2

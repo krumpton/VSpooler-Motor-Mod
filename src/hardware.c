@@ -57,8 +57,8 @@ void hardware_init() {
     gpio_isr_handler_add(RUNOUT_PIN, event_isr_handler, (void*)RUNOUT_PIN);
 
     // init motor pins
-    gpio_set_level(DIR_PIN, 0); // HIGH = clockwise
-    gpio_set_level(EN_PIN, gpio_get_level(SWITCH_PIN));
+    gpio_set_level(DIR_PIN, ANTICLOCKWISE);
+    gpio_set_level(EN_PIN, !gpio_get_level(SWITCH_PIN));
 }
 
 uint8_t read_inputs() {
