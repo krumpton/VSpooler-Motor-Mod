@@ -1,25 +1,32 @@
 #include "hardware.h"
 #include "led.h"
 
+QueueHandle_t hardware_event_queue;
+
 void app_main(void) {
+    // create task queue
+    hardware_event_queue = xQueueCreate(10, sizeof(input_event_t));
     // init LED buffer
     ESP_ERROR_CHECK_WITHOUT_ABORT(led_init(LED_PIN));
+    
     // init GPIO & event queue
     hardware_init();
 
-    gpio_set_level(EN_PIN, 0);
-
     while (1) {
-        // input_event_t ev;
-        // if (xQueueReceive(input_event_queue, &ev, portMAX_DELAY)) {
-        //     switch (ev) {
-        //         case EVENT_BTN_PRESS:
-        //         case EVENT_SWITCH_TOGGLE:
-        //         case EVENT_RUNOUT_TRIGGER:
-        //         default: return;
-        //     }
-        // }
-        led_update(&led_state);
-        motor_step();
+        input_event_t ev;
+        hardware_tick();
+
+        if (xQueueReceive(hardware_event_queue, &ev, 0)) {
+            switch (ev) {
+                case EVENT_BTN_PRESS:
+                    break;
+                case EVENT_RUNOUT_TRIGGER:
+                    break;
+                default: break;
+            }
+        }
+
+        led_update(machine_state);
+        led_tick(&led_state);
     }
 }

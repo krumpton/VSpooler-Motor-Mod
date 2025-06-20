@@ -12,10 +12,10 @@ led_state_t led_state;
 
 static void led_reset_state() {
     led_state = (led_state_t) {
-        .brightness = MAX_BRIGHTNESS,
+        .brightness = 0,
         .colour = LED_PURPLE,
-        .pulse = true,
-        .pulse_dir = PULSE_DECR,
+        .pulse_mode = PULSE_LOOP,
+        .pulse_dir = PULSE_INCR,
     };
 }
 
@@ -24,8 +24,12 @@ esp_err_t led_init(gpio_num_t pin) {
     return ws28xx_init(pin, WS2812B, 1, &led_buffer);
 }
 
-void led_update(led_state_t* state) {
-    if (state->pulse) {
+void led_update(uint8_t bitfield) {
+    
+}
+
+void led_tick(led_state_t* state) {
+    if (state->pulse_mode == PULSE_LOOP) {
         switch (state->pulse_dir) {
             case PULSE_DECR:
                 if (state->brightness > 0) {
@@ -47,6 +51,9 @@ void led_update(led_state_t* state) {
 
             default: return;
         }
+    }
+    else if (state->pulse_mode == PULSE_ONCE) {
+        // single pulse logic
     }
     else {
         state->brightness = MAX_BRIGHTNESS;

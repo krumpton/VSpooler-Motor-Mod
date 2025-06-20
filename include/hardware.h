@@ -4,44 +4,28 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "rom/ets_sys.h"
+#include "esp_timer.h"
 
 // events
 typedef enum {
     EVENT_BTN_PRESS,
     EVENT_RUNOUT_TRIGGER,
-    EVENT_SWITCH_TOGGLE,
 } input_event_t;
 
-typedef enum {
-    CLOCKWISE = 0,
-    ANTICLOCKWISE = 1,
-} motor_dir_t;
+// machine state bitmasks
+#define BITMASK_SWITCH   (1 << 0)
+#define BITMASK_RUNOUT   (1 << 1)
+#define BITMASK_RUNNING  (1 << 2)
+#define BITMASK_STOPPING (1 << 3)
+#define BITMASK_PAUSED   (1 << 4)
+// bits 5 and 6 are unused
+#define BITMASK_FINISHED (1 << 7)
 
-// LED pin
-#define LED_PIN GPIO_NUM_2
 
-// TMC2209 setup
-#define STEP_DELAY_US 100
-#define STEP_PULSE_WIDTH_US 20
-
-#define DIR_PIN GPIO_NUM_8
-#define STEP_PIN GPIO_NUM_9
-#define EN_PIN GPIO_NUM_10
-
-// input pins
-#define BTN_PIN GPIO_NUM_3
-#define SWITCH_PIN GPIO_NUM_4
-#define RUNOUT_PIN GPIO_NUM_1
-
-// input bit positions
-#define BTN_BIT 2
-#define SWITCH_BIT 1
-#define RUNOUT_BIT 0
-
-// event queue
-extern QueueHandle_t input_event_queue;
+// external event queue & state bitfield
+extern QueueHandle_t hardware_event_queue;
+extern uint8_t machine_state;
 
 // functions
 void hardware_init();
-uint8_t read_inputs();
-void motor_step();
+void hardware_tick();
