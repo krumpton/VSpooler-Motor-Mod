@@ -40,9 +40,7 @@ uint8_t machine_state;
 
 // - ISR
 void IRAM_ATTR event_isr_handler(void* arg) {
-    gpio_num_t pin = (gpio_num_t)arg;
     hardware_event_t e = EVENT_BTN_PRESS;
-
     xQueueSendFromISR(input_event_queue, &e, NULL);
 }
 
