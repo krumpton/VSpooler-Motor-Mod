@@ -10,7 +10,9 @@
 typedef enum {
     EVENT_BTN_PRESS,
     EVENT_RUNOUT_TRIGGER,
-} input_event_t;
+    EVENT_BTN_PRESS_VALID,
+    EVENT_BTN_PRESS_INVALID,
+} hardware_event_t;
 
 // machine state bitmasks
 #define BITMASK_SWITCH   (1 << 0)

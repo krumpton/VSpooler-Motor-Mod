@@ -45,7 +45,7 @@ uint8_t machine_state;
 // - ISR
 void IRAM_ATTR event_isr_handler(void* arg) {
     gpio_num_t pin = (gpio_num_t)arg;
-    input_event_t e;
+    hardware_event_t e;
 
     switch (pin) {
         case BTN_PIN: e = EVENT_BTN_PRESS;
@@ -99,7 +99,7 @@ static bool debounce(debounce_info_t* db) {
 // - Shared functions
 void hardware_init() {
     // init queue & state
-    input_event_queue = xQueueCreate(10, sizeof(input_event_t));
+    input_event_queue = xQueueCreate(10, sizeof(hardware_event_t));
     machine_state = 0b00000000;
 
     // motor pins - output, no ISR
@@ -157,7 +157,7 @@ void hardware_tick() {
     // validated against current state
     update_machine_state(&machine_state);
 
-    input_event_t ev;
+    hardware_event_t ev;
     if (xQueueReceive(input_event_queue, &ev, 0)) {
         switch (ev) {
             case EVENT_BTN_PRESS: 

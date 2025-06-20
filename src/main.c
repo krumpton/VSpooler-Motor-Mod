@@ -5,7 +5,7 @@ QueueHandle_t hardware_event_queue;
 
 void app_main(void) {
     // create task queue
-    hardware_event_queue = xQueueCreate(10, sizeof(input_event_t));
+    hardware_event_queue = xQueueCreate(10, sizeof(hardware_event_t));
     // init LED buffer
     ESP_ERROR_CHECK_WITHOUT_ABORT(led_init(LED_PIN));
     
@@ -13,7 +13,7 @@ void app_main(void) {
     hardware_init();
 
     while (1) {
-        input_event_t ev;
+        hardware_event_t ev;
         hardware_tick();
 
         if (xQueueReceive(hardware_event_queue, &ev, 0)) {
