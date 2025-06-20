@@ -27,8 +27,12 @@ void led_set_pulse(pulse_mode_t mode, int duration) {
     led_state.pulse_duration = duration;
 }
 
-void led_pulse_single() {
-
+void led_pulse_single(uint32_t colour, int duration) {
+    led_state.pulse_mode = PULSE_ONCE;
+    led_state.pulse_duration = duration;
+    led_state.colour = colour;
+    led_state.brightness = 1;
+    led_state.pulse_dir = PULSE_INCR;
 }
 
 void led_tick() {
@@ -56,7 +60,26 @@ void led_tick() {
         }
     }
     else if (led_state.pulse_mode == PULSE_ONCE) {
-        // single pulse logic
+        switch (led_state.pulse_dir) {
+            case PULSE_INCR:
+                if (led_state.brightness < led_state.pulse_duration) {
+                    led_state.brightness++;
+                }
+                else {
+                    led_state.pulse_dir = PULSE_DECR;
+                }
+                break;
+            case PULSE_DECR:
+                if (led_state.brightness > 0) {
+                    led_state.brightness--;
+                }
+                else {
+                    led_state.pulse_dir = PULSE_INCR;
+                    led_state.pulse_mode = PULSE_NONE;
+                }
+                break;
+            default: break;
+        }
     }
     else {
         led_state.brightness = led_state.pulse_duration;

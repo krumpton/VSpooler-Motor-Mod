@@ -53,7 +53,7 @@ typedef struct {
 esp_err_t led_init(gpio_num_t pin);
 void led_set_colour(uint32_t colour);
 void led_set_pulse(pulse_mode_t mode, int duration);
-void led_pulse_single();
+void led_pulse_single(uint32_t colour, int duration);
 void led_tick();
 
 // vars

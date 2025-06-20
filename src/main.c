@@ -21,6 +21,7 @@ void app_main(void) {
                 case EVENT_BTN_PRESS_VALID:
                     break;
                 case EVENT_BTN_PRESS_INVALID:
+                    led_pulse_single(LED_RED, PULSE_DURATION / 4);
                     break;
                 default: break;
             }
@@ -29,16 +30,16 @@ void app_main(void) {
         if (led_state.pulse_mode != PULSE_ONCE) {
             uint32_t colour = LED_WHITE;
             pulse_mode_t pulse_mode = PULSE_NONE;
-            int pulse_duration = 4096;
+            int pulse_duration = PULSE_DURATION;
 
             switch (machine_state & (BITMASK_RUNOUT | BITMASK_RUNNING)) {
                 case BITMASK_RUNOUT: // filament unloaded, not running
                     pulse_mode = PULSE_LOOP;
-                    pulse_duration = 4096;
+                    pulse_duration = PULSE_DURATION;
                     break;
                 case BITMASK_RUNNING: // filament loaded, running
                     pulse_mode = PULSE_LOOP;
-                    pulse_duration = 8192;
+                    pulse_duration = PULSE_DURATION * 2;
                     break;
                 default: 
                     pulse_mode = PULSE_NONE;
@@ -46,10 +47,21 @@ void app_main(void) {
             }
 
             if (!(machine_state & BITMASK_SWITCH)) {
-                colour = LED_CYAN; // switch = OFF - blue
+                colour = LED_MAGENTA; // switch = OFF - magenta
             }
             else {
                 colour = LED_ORANGE; // switch = ON - orange
+            }
+
+            if (machine_state & BITMASK_RUNNING) {
+                colour = LED_AZURE; // motor running - blue
+            }
+            else if (machine_state & BITMASK_PAUSED) {
+                colour = LED_INDIGO;
+            }
+            else if (machine_state & BITMASK_FINISHED) {
+                colour = LED_CHARTREUSE;
+                pulse_mode = PULSE_NONE;
             }
 
             led_set_pulse(pulse_mode, pulse_duration);

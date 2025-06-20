@@ -9,7 +9,6 @@
 // events
 typedef enum {
     EVENT_BTN_PRESS,
-    EVENT_RUNOUT_TRIGGER,
     EVENT_BTN_PRESS_VALID,
     EVENT_BTN_PRESS_INVALID,
 } hardware_event_t;

@@ -8,15 +8,6 @@ An addon for the [V-Spooler](https://www.printables.com/model/684376-v-spooler) 
 
 Should be fairly easy to port over to Arduino if anybody is so inclined, I think I've kept the project layout pretty sane and readable.
 
-## Progress
-
-- **Button & switch logic**: The final plan is for the switch to control the EN pin of the TMC2209 (i.e. switch off = EN high, motor can be turned; switch on = EN low, motor engaged), and the button will start and stop spooling.
-- **Runout sensor logic**: When the button is pressed, it should first check whether or not there is filament in the runout sensor. If not, the motor won't start spooling. It should also stop the motor if the runout sensor changes states while the motor is running.
-- ~~**Belt tensioner**: My measurements of the V-Spooler were largely done with a ruler, so they are not super accurate. Because of this, the distance between the two pulleys is off by ~1mm, which can cause tooth skipping. I plan to make a simple tensioner which will attach to the top 2 screws of the motor, and use a 603 bearing to apply tension to the top of the belt.~~ Done
-- ~~**Decoupling/bulk caps**: Done~~
-- **Motor start/stop profiles**: Right now, the motor starts and stops instantly, which is not ideal - it causes skipped teeth even with an empty spool. I plan to have the motor ramp up/down to prevent this (needs to be a fast ramp on stop, or the filament may pull loose).
-- **LED states**: The LED colour and pattern will reflect the machine state. This will be determined by the 8-bit bitfield which holds the state of the hardware.
-
 
 ## Features
 
@@ -25,9 +16,9 @@ Should be fairly easy to port over to Arduino if anybody is so inclined, I think
 
 
 ## Required Hardware
-- **V-Spooler** - only tested with the base model, not any of the extended versions like V-Spooler X. Untested with the desk mount, but it's likely to interfere since it uses the same mounting holes.
-- **ESP32** - I used an ESP32C3 Super Mini for its small form factor, but any should work.
-    - **Buck converter (optional)** - depends whether your MCU can handle the same voltage as the motor. Mine can't.
+- **V-Spooler** - only tested with the base model, not any of the extended versions like V-Spooler X. Untested with the desk mount, but it will almost certainly interfere since it uses the same mounting holes. A modified case might be possible to get around this, but I don't use the desk mount so haven't looked into it.
+- **ESP32** - I used an ESP32C3 Super Mini for its small form factor, but any should work. I recommend something with 5V logic though, or you'll need to do some level shifting (see below)
+    - **Buck converter (optional)** - depends whether your MCU can handle the same voltage as the motor. Some can handle up to 12V or 15V. Mine can't. RIP.
 - **TMC2209** - or any motor driver compatible with your microcontroller.
 - **Stepper motor** - any which physically fits the project and can be run by your hardware. I used an LDO Nema 17 Speedy Power.
 - **Runout sensor** - any which outputs a signal your MCU can interpret. I used an old one from a dead Ender 3 with a 3D printed case to allow PTFE tubing to be inserted. You may need to alter the code depending on whether your runout sensor outputs a high or low signal when filament is detected.

@@ -32,52 +32,71 @@ static debounce_info_t button_debounce = {
     .pin = BTN_PIN,
     .check_level = true,
 };
-static debounce_info_t runout_debounce = {
-    .debounce_period_us = 50000,
-    .last_triggered = 0,
-    .pin = RUNOUT_PIN,
-    .check_level = false,
-};
 
-static int motor_speed = 0;
+static int motor_speed_pct = 0;
+static int motor_speed_step = 5;
+static int motor_speed_max = 1000;
 uint8_t machine_state;
 
 // - ISR
 void IRAM_ATTR event_isr_handler(void* arg) {
     gpio_num_t pin = (gpio_num_t)arg;
-    hardware_event_t e;
-
-    switch (pin) {
-        case BTN_PIN: e = EVENT_BTN_PRESS;
-            break;
-        case RUNOUT_PIN: e = EVENT_RUNOUT_TRIGGER;
-            break;
-        default: return;
-    }
+    hardware_event_t e = EVENT_BTN_PRESS;
 
     xQueueSendFromISR(input_event_queue, &e, NULL);
 }
 
 // - Static functions
+// set an individual bit in the bitfield
 static void set_bit(uint8_t* input, uint8_t bitmask, uint8_t state) {
     if (state) {
         *input |= bitmask;
-    }
-    else {
+    } else {
         *input &= ~bitmask;
     }
 }
 
+// set switch and runout bits based on pin state
 static void update_machine_state(uint8_t* state) {
     set_bit(&machine_state, BITMASK_SWITCH, !gpio_get_level(SWITCH_PIN));
     set_bit(&machine_state, BITMASK_RUNOUT, !gpio_get_level(RUNOUT_PIN));
+
+    if ((machine_state & BITMASK_PAUSED) && 
+    (!gpio_get_level(SWITCH_PIN) || !gpio_get_level(RUNOUT_PIN))) {
+        set_bit(&machine_state, BITMASK_PAUSED, 0);
+    }
 }
 
+// step the motor once & adjust speed as needed
 static void motor_step() {
+    if (machine_state & BITMASK_STOPPING) {
+        if (motor_speed_pct > 0) {
+            motor_speed_pct -= motor_speed_step;
+
+            // speed percent shouldn't go below 0, but check to be safe
+            if (motor_speed_pct <= 0) {
+                motor_speed_pct = 0;
+                set_bit(&machine_state, BITMASK_RUNNING, 0);
+                set_bit(&machine_state, BITMASK_STOPPING, 0);
+            }
+        }
+    } else { // stop bit not set
+        if (motor_speed_pct < motor_speed_max) {
+            motor_speed_pct += motor_speed_step;
+        }
+    }
+
+    if (motor_speed_pct > motor_speed_max) {
+        motor_speed_pct = motor_speed_max;
+    }
+
+    int speed_safe = (motor_speed_pct > 0) ? motor_speed_pct : 1;
+    int delay = STEP_DELAY_US * (motor_speed_max / speed_safe);
+
     gpio_set_level(STEP_PIN, 1);
     ets_delay_us(STEP_PULSE_WIDTH_US);
     gpio_set_level(STEP_PIN, 0);
-    ets_delay_us(STEP_DELAY_US - STEP_PULSE_WIDTH_US);
+    ets_delay_us(delay - STEP_PULSE_WIDTH_US);
 }
 
 static bool debounce(debounce_info_t* db) {
@@ -112,9 +131,9 @@ void hardware_init() {
     };
     gpio_config(&io_out);
 
-    // switch pin - input, no ISR
+    // switch pin & runout pin - input, no ISR
     gpio_config_t io_in = {
-        .pin_bit_mask = 1ULL << SWITCH_PIN,
+        .pin_bit_mask = (1ULL << SWITCH_PIN) | (1ULL << RUNOUT_PIN),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -132,20 +151,9 @@ void hardware_init() {
     };
     gpio_config(&io_in_neg);
 
-    // runout sensor - input, ISR on any edge
-    gpio_config_t io_in_any = {
-        .pin_bit_mask = 1ULL << RUNOUT_PIN,
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_ANYEDGE,
-    };
-    gpio_config(&io_in_any);
-
     // add ISR handler
     gpio_install_isr_service(0);
-    gpio_isr_handler_add(BTN_PIN, event_isr_handler, (void*)BTN_PIN);
-    gpio_isr_handler_add(RUNOUT_PIN, event_isr_handler, (void*)RUNOUT_PIN);
+    gpio_isr_handler_add(BTN_PIN, event_isr_handler, NULL);
 
     // init motor pins
     gpio_set_level(DIR_PIN, ANTICLOCKWISE);
@@ -153,33 +161,54 @@ void hardware_init() {
 }
 
 void hardware_tick() {
-    // update machine state first to make sure button presses are 
+    // update machine state first to make sure button presses are
     // validated against current state
     update_machine_state(&machine_state);
 
     hardware_event_t ev;
     if (xQueueReceive(input_event_queue, &ev, 0)) {
         switch (ev) {
-            case EVENT_BTN_PRESS: 
+            case EVENT_BTN_PRESS:
                 if (debounce(&button_debounce)) {
-                    xQueueSend(hardware_event_queue, &ev, 0);
+                    if (!(machine_state & BITMASK_RUNNING)) {  // motor not running
+                        // check if switch & runout are valid
+                        if ((machine_state & BITMASK_SWITCH) && !(machine_state & BITMASK_RUNOUT)) {
+                            set_bit(&machine_state, BITMASK_RUNNING, 1);
+
+                            if (machine_state & BITMASK_PAUSED) {
+                                set_bit(&machine_state, BITMASK_PAUSED, 0);
+                            }
+                        } else {
+                            // send invalid event to task queue
+                            ev = EVENT_BTN_PRESS_INVALID;
+                            xQueueSend(hardware_event_queue, &ev, 0);
+                        }
+                    } else {
+                        // set pause bit if manually stopped, for different LED state
+                        set_bit(&machine_state, BITMASK_STOPPING, 1);
+                        set_bit(&machine_state, BITMASK_PAUSED, 1);
+                    }
                 }
-            break;
-            case EVENT_RUNOUT_TRIGGER: 
-                if (debounce(&runout_debounce)) {
-                    xQueueSend(hardware_event_queue, &ev, 0);
-                }
-            break;
-            default: break;
+                break;
+            default:
+                break;
         }
+    }
+
+    // unset finished bit if the user turns off the switch
+    if ((machine_state & BITMASK_FINISHED) && !(machine_state & BITMASK_SWITCH)) {
+        set_bit(&machine_state, BITMASK_FINISHED, 0);
     }
 
     gpio_set_level(EN_PIN, gpio_get_level(SWITCH_PIN));
 
     if (machine_state & BITMASK_RUNNING) {
+        if (machine_state & BITMASK_RUNOUT) {
+            set_bit(&machine_state, BITMASK_STOPPING, 1);
+            set_bit(&machine_state, BITMASK_FINISHED, 1);
+        }
         motor_step();
-    }
-    else {
+    } else {
         ets_delay_us(STEP_DELAY_US);
     }
 }
