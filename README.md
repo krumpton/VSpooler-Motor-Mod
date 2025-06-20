@@ -10,11 +10,9 @@ Should be fairly easy to port over to Arduino if anybody is so inclined, I think
 
 ## Progress
 
-In the project's current state, it just spins the motor and flashes the LED purple while power is supplied. Below is the to-do list to get it finished:
-
 - **Button & switch logic**: The final plan is for the switch to control the EN pin of the TMC2209 (i.e. switch off = EN high, motor can be turned; switch on = EN low, motor engaged), and the button will start and stop spooling.
 - **Runout sensor logic**: When the button is pressed, it should first check whether or not there is filament in the runout sensor. If not, the motor won't start spooling. It should also stop the motor if the runout sensor changes states while the motor is running.
-- **Belt tensioner**: My measurements of the V-Spooler were largely done with a ruler, so they are not super accurate. Because of this, the distance between the two pulleys is off by ~1mm, which can cause tooth skipping. I plan to make a simple tensioner which will attach to the top 2 screws of the motor, and use a 603 bearing to apply tension to the top of the belt.
+- ~~**Belt tensioner**: My measurements of the V-Spooler were largely done with a ruler, so they are not super accurate. Because of this, the distance between the two pulleys is off by ~1mm, which can cause tooth skipping. I plan to make a simple tensioner which will attach to the top 2 screws of the motor, and use a 603 bearing to apply tension to the top of the belt.~~ Done
 - ~~**Decoupling/bulk caps**: Done~~
 - **Motor start/stop profiles**: Right now, the motor starts and stops instantly, which is not ideal - it causes skipped teeth even with an empty spool. I plan to have the motor ramp up/down to prevent this (needs to be a fast ramp on stop, or the filament may pull loose).
 - **LED states**: The LED colour and pattern will reflect the machine state. This will be determined by the 8-bit bitfield which holds the state of the hardware.
