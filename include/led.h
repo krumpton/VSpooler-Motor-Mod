@@ -5,15 +5,9 @@
 
 #include "esp_ws28xx.h"
 
-#define MAX_BRIGHTNESS 4096
+#define PULSE_DURATION 4096
 
 // typedefs
-typedef struct {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} rgb_t;
-
 typedef enum {
     PULSE_NONE,
     PULSE_LOOP,
@@ -27,26 +21,40 @@ typedef enum {
 
 typedef struct {
     int brightness;
-    rgb_t colour;
+    uint32_t colour;
     pulse_mode_t pulse_mode;
     pulse_dir_t pulse_dir;
+    int pulse_duration;
 } led_state_t;
 
 // LED pin
 #define LED_PIN GPIO_NUM_2
 
-// colours
-extern const rgb_t LED_WHITE;
-extern const rgb_t LED_RED;
-extern const rgb_t LED_GREEN;
-extern const rgb_t LED_BLUE;
-extern const rgb_t LED_YELLOW;
-extern const rgb_t LED_PURPLE;
+// COLOURS
+// misc
+#define LED_WHITE       0x00FFFFFFU
+// primary
+#define LED_RED         0x00FF0000U
+#define LED_GREEN       0x0000FF00U
+#define LED_BLUE        0x000000FFU
+// secondary
+#define LED_YELLOW      0x00FFFF00U
+#define LED_CYAN        0x0000FFFFU
+#define LED_MAGENTA     0x00FF00FFU
+ // tertiary
+#define LED_ORANGE      0x00FF8000U
+#define LED_CHARTREUSE  0x0080FF00U
+#define LED_SPRING      0x0000FF80U
+#define LED_AZURE       0x000080FFU
+#define LED_INDIGO      0x008000FFU
+#define LED_ROSE        0x00FF0080U
 
 // functions
 esp_err_t led_init(gpio_num_t pin);
-void led_update(uint8_t bitfield);
-void led_tick(led_state_t* state);
+void led_set_colour(uint32_t colour);
+void led_set_pulse(pulse_mode_t mode, int duration);
+void led_pulse_single();
+void led_tick();
 
 // vars
 extern CRGB* led_buffer;

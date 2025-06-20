@@ -18,15 +18,44 @@ void app_main(void) {
 
         if (xQueueReceive(hardware_event_queue, &ev, 0)) {
             switch (ev) {
-                case EVENT_BTN_PRESS:
+                case EVENT_BTN_PRESS_VALID:
                     break;
-                case EVENT_RUNOUT_TRIGGER:
+                case EVENT_BTN_PRESS_INVALID:
                     break;
                 default: break;
             }
         }
 
-        led_update(machine_state);
-        led_tick(&led_state);
+        if (led_state.pulse_mode != PULSE_ONCE) {
+            uint32_t colour = LED_WHITE;
+            pulse_mode_t pulse_mode = PULSE_NONE;
+            int pulse_duration = 4096;
+
+            switch (machine_state & (BITMASK_RUNOUT | BITMASK_RUNNING)) {
+                case BITMASK_RUNOUT: // filament unloaded, not running
+                    pulse_mode = PULSE_LOOP;
+                    pulse_duration = 4096;
+                    break;
+                case BITMASK_RUNNING: // filament loaded, running
+                    pulse_mode = PULSE_LOOP;
+                    pulse_duration = 8192;
+                    break;
+                default: 
+                    pulse_mode = PULSE_NONE;
+                    break;
+            }
+
+            if (!(machine_state & BITMASK_SWITCH)) {
+                colour = LED_CYAN; // switch = OFF - blue
+            }
+            else {
+                colour = LED_ORANGE; // switch = ON - orange
+            }
+
+            led_set_pulse(pulse_mode, pulse_duration);
+            led_set_colour(colour);
+        }
+
+        led_tick();
     }
 }
