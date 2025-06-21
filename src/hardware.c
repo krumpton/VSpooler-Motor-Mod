@@ -33,12 +33,15 @@ static debounce_info_t button_debounce = {
     .check_level = true,
 };
 
+// motor speed ramp vars
 static int motor_speed_pct = 0;
 static int motor_speed_step = 5;
 static int motor_speed_max = 1000;
+// overall state
 uint8_t machine_state;
 
 // - ISR
+// just drops events into the task queue to process next tick.
 void IRAM_ATTR event_isr_handler(void* arg) {
     hardware_event_t e = EVENT_BTN_PRESS;
     xQueueSendFromISR(input_event_queue, &e, NULL);
@@ -59,8 +62,9 @@ static void update_machine_state(uint8_t* state) {
     set_bit(&machine_state, BITMASK_SWITCH, !gpio_get_level(SWITCH_PIN));
     set_bit(&machine_state, BITMASK_RUNOUT, !gpio_get_level(RUNOUT_PIN));
 
-    if ((machine_state & BITMASK_PAUSED) && 
-    (!gpio_get_level(SWITCH_PIN) || !gpio_get_level(RUNOUT_PIN))) {
+    // unset pause bit if filament is unloaded or switch toggled off
+    if ((machine_state & BITMASK_PAUSED) &&
+        (!gpio_get_level(SWITCH_PIN) || !gpio_get_level(RUNOUT_PIN))) {
         set_bit(&machine_state, BITMASK_PAUSED, 0);
     }
 }
@@ -84,25 +88,34 @@ static void motor_step() {
         }
     }
 
+    // clamp motor_speed_pct to 0 <= x <= motor_speed_max
     if (motor_speed_pct > motor_speed_max) {
         motor_speed_pct = motor_speed_max;
     }
 
+    // make sure we don't divide by 0
     int speed_safe = (motor_speed_pct > 0) ? motor_speed_pct : 1;
     int delay = STEP_DELAY_US * (motor_speed_max / speed_safe);
 
-    gpio_set_level(STEP_PIN, 1);
-    ets_delay_us(STEP_PULSE_WIDTH_US);
-    gpio_set_level(STEP_PIN, 0);
-    ets_delay_us(delay - STEP_PULSE_WIDTH_US);
+    // only step the motor if running bit is still set
+    if (machine_state & BITMASK_RUNNING) {
+        gpio_set_level(STEP_PIN, 1);
+        ets_delay_us(STEP_PULSE_WIDTH_US);
+        gpio_set_level(STEP_PIN, 0);
+        ets_delay_us(delay - STEP_PULSE_WIDTH_US);
+    }
 }
 
+// debounce input events - could be simplified since only the button is
+// debounced now, but might as well leave it as is.
 static bool debounce(debounce_info_t* db) {
     uint64_t now = esp_timer_get_time();
+    // check time since last trigger
     if (now - db->last_triggered < db->debounce_period_us) {
         return false;
     }
 
+    // make sure level is LOW - prevents triggering when button is released
     if (db->check_level) {
         if (gpio_get_level(db->pin) != 0) {
             return false;
@@ -164,15 +177,19 @@ void hardware_tick() {
     update_machine_state(&machine_state);
 
     hardware_event_t ev;
+    // receive events from ISR - can be simplified quite a bit now that
+    // the runout sensor no longer triggers ISR
     if (xQueueReceive(input_event_queue, &ev, 0)) {
         switch (ev) {
             case EVENT_BTN_PRESS:
                 if (debounce(&button_debounce)) {
                     if (!(machine_state & BITMASK_RUNNING)) {  // motor not running
                         // check if switch & runout are valid
-                        if ((machine_state & BITMASK_SWITCH) && !(machine_state & BITMASK_RUNOUT)) {
+                        if ((machine_state & BITMASK_SWITCH) && 
+                            !(machine_state & BITMASK_RUNOUT)) {
                             set_bit(&machine_state, BITMASK_RUNNING, 1);
 
+                            // unset pause bit if set
                             if (machine_state & BITMASK_PAUSED) {
                                 set_bit(&machine_state, BITMASK_PAUSED, 0);
                             }
@@ -198,6 +215,7 @@ void hardware_tick() {
         set_bit(&machine_state, BITMASK_FINISHED, 0);
     }
 
+    // set EN pin to switch state - both are active-low signals, so no inverting needed
     gpio_set_level(EN_PIN, gpio_get_level(SWITCH_PIN));
 
     if (machine_state & BITMASK_RUNNING) {
@@ -205,8 +223,11 @@ void hardware_tick() {
             set_bit(&machine_state, BITMASK_STOPPING, 1);
             set_bit(&machine_state, BITMASK_FINISHED, 1);
         }
+
         motor_step();
     } else {
+        // delay if not stepping the motor to ensure consistent tick duration
+        // (tick duration only changes when the motor is starting/stopping)
         ets_delay_us(STEP_DELAY_US);
     }
 }

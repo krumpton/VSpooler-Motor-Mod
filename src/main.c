@@ -16,10 +16,9 @@ void app_main(void) {
         hardware_event_t ev;
         hardware_tick();
 
+        // receive messages from hardware.c
         if (xQueueReceive(hardware_event_queue, &ev, 0)) {
             switch (ev) {
-                case EVENT_BTN_PRESS_VALID:
-                    break;
                 case EVENT_BTN_PRESS_INVALID:
                     led_pulse_single(LED_RED, PULSE_DURATION / 4);
                     break;
@@ -27,6 +26,8 @@ void app_main(void) {
             }
         }
 
+        // if the LED is in the middle of doing a single pulse, changing its
+        // state will cause it to end early, so check first.
         if (led_state.pulse_mode != PULSE_ONCE) {
             uint32_t colour = LED_WHITE;
             pulse_mode_t pulse_mode = PULSE_NONE;
@@ -57,10 +58,10 @@ void app_main(void) {
                 colour = LED_AZURE; // motor running - blue
             }
             else if (machine_state & BITMASK_PAUSED) {
-                colour = LED_INDIGO;
+                colour = LED_INDIGO; // manually paused via button
             }
             else if (machine_state & BITMASK_FINISHED) {
-                colour = LED_CHARTREUSE;
+                colour = LED_CHARTREUSE; // stopped due to runout sensor
                 pulse_mode = PULSE_NONE;
             }
 
