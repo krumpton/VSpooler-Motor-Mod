@@ -12,7 +12,7 @@ Should be fairly easy to port over to Arduino if anybody is so inclined, I think
 ## Planned improvements
 While the main functionality is done, there are still a couple of things that can be improved;
 - **Non-linear motor ramp profiles** - right now the motor ramps up/down linearly, but it might benefit from a non-linear approach. I'll decide this once I've tested a good number of spools with the linear profile - it hasn't skipped any teeth yet in my testing, so it might not be needed.
-- **TMC2209 current monitoring or UART control** - on some spools, the end of the filament fails to enter the PTFE tube and clear the runout sensor due to the small bend securing it to the spool core. When this happens, the motor stalls until the user manually intervenes, which is far from ideal. To detect this, I'd need to either drive the TMC2209 in UART mode (currently I'm just driving the STEP/DIR pins directly with manual timing), or add a shunt resistor and monitor the current draw via one of the ESP32's analogue pins.
+- **TMC2209 UART control or current monitoring** - on some spools, the end of the filament fails to enter the PTFE tube and clear the runout sensor due to the small bend securing it to the spool core. When this happens, the motor stalls until the user manually intervenes, which is far from ideal. To detect this, I'd need to either drive the TMC2209 in UART mode (currently I'm just driving the STEP/DIR pins directly with manual timing), or add a shunt resistor and monitor the current draw via one of the ESP32's analogue pins.
 
 
 ## Required Hardware
