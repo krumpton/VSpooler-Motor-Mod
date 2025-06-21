@@ -4,15 +4,15 @@
 
 # V-Spooler Motor Mod
 
-An addon for the [V-Spooler](https://www.printables.com/model/684376-v-spooler) project to enable automation via an ESP32 and a stepper motor.
+An addon for the [V-Spooler](https://www.printables.com/model/684376-v-spooler) project to enable automation via an ESP32 and a stepper motor. Uses a WS2812B LED for status indication.
 
 Should be fairly easy to port over to Arduino if anybody is so inclined, I think I've kept the project layout pretty sane and readable.
 
 
-## Features
-
-- Uses a filament runout sensor to automatically stop when spooling is complete.
-- Indicates status via a WS2812B (NeoPixel) LED.
+## Planned improvements
+While the main functionality is done, there are still a couple of things that can be improved;
+- **Non-linear motor ramp profiles** - right now the motor ramps up/down linearly, but it might benefit from a non-linear approach. I'll decide this once I've tested a good number of spools with the linear profile - it hasn't skipped any teeth yet in my testing, so it might not be needed.
+- **TMC2209 current monitoring or UART control** - on some spools, the end of the filament fails to enter the PTFE tube and clear the runout sensor due to the small bend securing it to the spool core. When this happens, the motor stalls until the user manually intervenes, which is far from ideal. To detect this, I'd need to either drive the TMC2209 in UART mode (currently I'm just driving the STEP/DIR pins directly with manual timing), or add a shunt resistor and monitor the current draw via one of the ESP32's analogue pins.
 
 
 ## Required Hardware
